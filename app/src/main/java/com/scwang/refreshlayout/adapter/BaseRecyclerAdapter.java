@@ -19,6 +19,7 @@ import java.util.List;
  * Created by SCWANG on 2017/6/11.
  */
 
+@SuppressWarnings({"UnusedReturnValue", "unused"})
 public abstract class BaseRecyclerAdapter<T> extends RecyclerView.Adapter<SmartViewHolder> implements ListAdapter {
 
 
@@ -26,7 +27,9 @@ public abstract class BaseRecyclerAdapter<T> extends RecyclerView.Adapter<SmartV
 
     private final int mLayoutId;
     private final List<T> mList;
-    private AdapterView.OnItemClickListener mListener;
+    private int mLastPosition = -1;
+    private boolean mOpenAnimationEnable = true;
+    protected AdapterView.OnItemClickListener mListener;
 
     public BaseRecyclerAdapter(@LayoutRes int layoutId) {
         setHasStableIds(false);
@@ -48,6 +51,14 @@ public abstract class BaseRecyclerAdapter<T> extends RecyclerView.Adapter<SmartV
     }
     //</editor-fold>
 
+    private void addAnimate(SmartViewHolder holder, int postion) {
+        if (mOpenAnimationEnable && mLastPosition < postion) {
+            holder.itemView.setAlpha(0);
+            holder.itemView.animate().alpha(1).start();
+            mLastPosition = postion;
+        }
+    }
+
     //<editor-fold desc="RecyclerAdapter">
     @Override
     public SmartViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
@@ -65,31 +76,18 @@ public abstract class BaseRecyclerAdapter<T> extends RecyclerView.Adapter<SmartV
     public int getItemCount() {
         return mList.size();
     }
+
+    @Override
+    public void onViewAttachedToWindow(SmartViewHolder holder) {
+        super.onViewAttachedToWindow(holder);
+        addAnimate(holder, holder.getLayoutPosition());
+    }
+
+    public void setOpenAnimationEnable(boolean enabled) {
+        this.mOpenAnimationEnable = enabled;
+    }
+
     //</editor-fold>
-
-    //<editor-fold desc="API">
-
-    public BaseRecyclerAdapter<T> setOnItemClickListener(AdapterView.OnItemClickListener listener) {
-        mListener = listener;
-        return this;
-    }
-
-    public BaseRecyclerAdapter<T> refresh(Collection<T> collection) {
-        mList.clear();
-        mList.addAll(collection);
-        notifyDataSetChanged();
-        notifyListDataSetChanged();
-        return this;
-    }
-
-    public BaseRecyclerAdapter<T> loadmore(Collection<T> collection) {
-        mList.addAll(collection);
-        notifyDataSetChanged();
-        notifyListDataSetChanged();
-        return this;
-    }
-    //</editor-fold>
-
 
     //<editor-fold desc="ListAdapter">
     private final DataSetObservable mDataSetObservable = new DataSetObservable();
@@ -141,7 +139,9 @@ public abstract class BaseRecyclerAdapter<T> extends RecyclerView.Adapter<SmartV
             convertView = holder.itemView;
             convertView.setTag(holder);
         }
+        holder.setPosition(position);
         onBindViewHolder(holder, position);
+        addAnimate(holder, position);
         return convertView;
     }
 
@@ -168,4 +168,42 @@ public abstract class BaseRecyclerAdapter<T> extends RecyclerView.Adapter<SmartV
     }
 
     //</editor-fold>
+
+    //<editor-fold desc="API">
+
+    public T get(int index) {
+        return mList.get(index);
+    }
+
+    public BaseRecyclerAdapter<T> setOnItemClickListener(AdapterView.OnItemClickListener listener) {
+        mListener = listener;
+        return this;
+    }
+
+    public BaseRecyclerAdapter<T> refresh(Collection<T> collection) {
+        mList.clear();
+        mList.addAll(collection);
+        notifyDataSetChanged();
+        notifyListDataSetChanged();
+        mLastPosition = -1;
+        return this;
+    }
+
+    public BaseRecyclerAdapter<T> loadMore(Collection<T> collection) {
+        mList.addAll(collection);
+        notifyDataSetChanged();
+        notifyListDataSetChanged();
+        return this;
+    }
+
+    public BaseRecyclerAdapter<T> insert(Collection<T> collection) {
+        mList.addAll(0, collection);
+        notifyItemRangeInserted(0, collection.size());
+        notifyListDataSetChanged();
+        return this;
+    }
+
+
+    //</editor-fold>
+
 }
